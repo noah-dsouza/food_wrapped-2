@@ -1,3 +1,0 @@
-"""
-Food Wrapped backend package.
-"""
