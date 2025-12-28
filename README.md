@@ -22,7 +22,7 @@ Log what you eat, see patterns over time, and get **automatic cuisine suggestion
   - Monthly trends
   - Fun achievement badges
 
-- 🎨 **Modern Gen-Z UI**  
+- 🎨 **Modern UI**  
   - Built with React + TypeScript  
   - Smooth animations with Framer Motion  
   - Responsive, dark-mode friendly design
@@ -36,7 +36,6 @@ Log what you eat, see patterns over time, and get **automatic cuisine suggestion
 
 ### Frontend
 - **React + TypeScript**
-- **Vite**
 - **Tailwind CSS**
 - **Framer Motion**
 - **Recharts**
