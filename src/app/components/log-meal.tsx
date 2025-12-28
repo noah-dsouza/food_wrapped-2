@@ -39,18 +39,15 @@ export function LogMeal({ onAddMeal, todayStats }: LogMealProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Track if user manually set cuisine so we don't overwrite it
+  // Track if user manually set cuisine so not overwrite it
   const cuisineTouchedRef = useRef(false);
-
-  // Debounce timer
   const suggestTimerRef = useRef<number | null>(null);
 
-  // Auto-suggest cuisine when foodName changes
+  // Auto-suggest cuisine when foodName changes in backend mode
   useEffect(() => {
-    // Only do this in backend mode
     if (!BACKEND_ENABLED) return;
 
-    // If user already manually picked cuisine, don't overwrite
+    // don't overwrite if user chooses
     if (cuisineTouchedRef.current) return;
 
     const name = formData.foodName.trim();
@@ -67,11 +64,9 @@ export function LogMeal({ onAddMeal, todayStats }: LogMealProps) {
         // Only set it if still untouched and cuisine empty
         if (!cuisineTouchedRef.current) {
           setFormData((prev) => {
-            // If user typed fast and cuisine got set already, leave it
             if (prev.cuisine) return prev;
 
-            // Only set if the suggestion exists in our dropdown list
-            // (optional safety - remove if you want free-form)
+            // Only set if suggestion exists in dropdown list
             const safeCuisine = cuisineOptions.includes(suggestion.cuisine)
               ? suggestion.cuisine
               : suggestion.cuisine;
@@ -80,9 +75,8 @@ export function LogMeal({ onAddMeal, todayStats }: LogMealProps) {
           });
         }
       } catch (e) {
-        // Silent fail: autocomplete is “nice to have”
       }
-    }, 450); // debounce
+    }, 450); 
 
     return () => {
       if (suggestTimerRef.current) window.clearTimeout(suggestTimerRef.current);
@@ -319,7 +313,7 @@ export function LogMeal({ onAddMeal, todayStats }: LogMealProps) {
                     options={cuisineOptions}
                     value={formData.cuisine}
                     onChange={(e) => {
-                      cuisineTouchedRef.current = true; // user manually chose
+                      cuisineTouchedRef.current = true; 
                       setFormData({ ...formData, cuisine: e.target.value });
                     }}
                   />
