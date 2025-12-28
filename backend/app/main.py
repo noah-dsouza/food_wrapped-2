@@ -1,5 +1,4 @@
-# backend/app/main.py
-# FastAPI app: in-memory meal log + pandas "wrapped" analytics + ML cuisine suggestion endpoint.
+
 
 from __future__ import annotations
 
@@ -27,13 +26,10 @@ from .schemas import (
     CuisineSuggestion,
 )
 
-# ----------------------------
-# App setup
-# ----------------------------
 
 app = FastAPI(title="Food Wrapped API", version="1.0.0")
 
-# Allow frontend dev server to call backend
+# Let frontend call backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -45,16 +41,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ----------------------------
-# In-memory storage (demo mode)
-# ----------------------------
-# This is intentionally not a database.
-# Once the server restarts, data resets (perfect for demo projects).
-MEALS: List[Dict[str, Any]] = []
 
-# ----------------------------
-# ML model loading
-# ----------------------------
+MEALS: List[Dict[str, Any]] = []
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "cuisine_model.joblib")
 
@@ -62,13 +50,9 @@ _cuisine_model = None
 
 
 def load_cuisine_model():
-    """
-    Loads the scikit-learn model once and caches it.
-    """
     global _cuisine_model
     if _cuisine_model is None:
         if not os.path.exists(MODEL_PATH):
-            # Model missing: we can still run with heuristic fallback
             _cuisine_model = "MISSING"
         else:
             _cuisine_model = joblib.load(MODEL_PATH)
@@ -76,10 +60,6 @@ def load_cuisine_model():
 
 
 def heuristic_cuisine_guess(food_name: str) -> tuple[str, float]:
-    """
-    Dumb-but-useful fallback when model isn't available or can't return probabilities.
-    Returns (cuisine, confidence).
-    """
     s = food_name.lower()
 
     rules = [
@@ -102,17 +82,13 @@ def heuristic_cuisine_guess(food_name: str) -> tuple[str, float]:
 
 
 def predict_cuisine(food_name: str) -> tuple[str, float]:
-    """
-    Use model if possible; fallback to heuristic.
-    We try predict_proba first (best UX), else predict.
-    """
     model = load_cuisine_model()
 
-    # If model missing, fallback
+
     if model == "MISSING":
         return heuristic_cuisine_guess(food_name)
 
-    # Most sklearn text models are pipelines that accept [text] list
+
     try:
         # If model supports probabilities, use them for confidence
         if hasattr(model, "predict_proba") and hasattr(model, "classes_"):
@@ -122,18 +98,14 @@ def predict_cuisine(food_name: str) -> tuple[str, float]:
             confidence = float(probs[best_idx])
             return cuisine, confidence
 
-        # Otherwise, just predict label (confidence becomes meh)
+        # predict label 
         pred = model.predict([food_name])[0]
         return str(pred), 0.35
 
     except Exception:
-        # If anything goes sideways, fallback gracefully
         return heuristic_cuisine_guess(food_name)
 
-
-# ----------------------------
-# API endpoints
-# ----------------------------
+# Endpoinys
 
 @app.get("/health")
 def health():
@@ -142,11 +114,6 @@ def health():
 
 @app.post("/cuisine/suggest", response_model=CuisineSuggestResponse)
 def cuisine_suggest(payload: CuisineSuggestRequest):
-    """
-    Frontend calls this while typing.
-    Input: { "food_name": "chicken burrito bowl" }
-    Output: { "cuisine": "Mexican", "confidence": 0.72 }
-    """
     food_name = payload.food_name.strip()
     if len(food_name) < 3:
         return CuisineSuggestResponse(cuisine="Other", confidence=0.0)
@@ -157,11 +124,7 @@ def cuisine_suggest(payload: CuisineSuggestRequest):
 
 @app.post("/meals", response_model=MealResponse)
 def create_meal(meal: MealCreate):
-    """
-    Creates a meal entry.
-    If cuisine is blank, we auto-suggest and fill it.
-    """
-    # Normalize cuisine: frontend might send "" (empty string)
+    # Normalize for emprty str
     cuisine_in = (meal.cuisine or "").strip()
     suggested = None
 
@@ -190,18 +153,11 @@ def create_meal(meal: MealCreate):
 
 @app.get("/meals", response_model=List[MealResponse])
 def get_meals():
-    """
-    Returns all meals.
-    """
-    # We return without cuisine_suggestion because that’s only meaningful on create
     return [MealResponse(**m, cuisine_suggestion=None) for m in MEALS]
 
 
 @app.delete("/meals/{meal_id}")
 def delete_meal(meal_id: str):
-    """
-    Deletes by id.
-    """
     global MEALS
     before = len(MEALS)
     MEALS = [m for m in MEALS if m["id"] != meal_id]
@@ -238,7 +194,6 @@ def demo_seed():
         ("2024-03-31", "Dinner", "Ceviche", "Home", "Peruvian", 5, 20.0),
     ]
 
-    # Repeat to reach ~48 entries (like your earlier log)
     rows = []
     i = 0
     while len(rows) < 48:
@@ -259,16 +214,13 @@ def demo_seed():
         )
         i += 1
 
-    # Add to memory
-    MEALS[:0] = rows[::-1]  # newest first
+    # Add to memory w newest first
+    MEALS[:0] = rows[::-1]  
     return {"seeded": len(rows)}
 
 
 @app.get("/wrapped", response_model=WrappedResponse)
 def wrapped(year: int = Query(..., ge=1900, le=2100), month: Optional[int] = Query(None, ge=1, le=12)):
-    """
-    Pandas analytics: compute your "Food Wrapped" for a given year (and optional month).
-    """
     if not MEALS:
         # Empty response with correct shape
         monthly_counts = [{"month": f"{year}-{m:02d}", "meals": 0} for m in range(1, 13)]
@@ -299,7 +251,7 @@ def wrapped(year: int = Query(..., ge=1900, le=2100), month: Optional[int] = Que
 
     total = int(len(df))
 
-    # If nothing in that period, return empty
+    # If nothing in eriod, return empty
     if total == 0:
         monthly_counts = [{"month": f"{year}-{m:02d}", "meals": 0} for m in range(1, 13)]
         return WrappedResponse(
@@ -324,7 +276,7 @@ def wrapped(year: int = Query(..., ge=1900, le=2100), month: Optional[int] = Que
     top_foods_series = df["food_name"].fillna("Unknown").value_counts().head(10)
     top_foods = [CountItem(food_name=str(k), count=int(v)) for k, v in top_foods_series.items()]
 
-    # Category split (fractions)
+    # Category split 
     cat_counts = df["category"].value_counts()
     category_split = {
         "Home": float(cat_counts.get("Home", 0) / total),
@@ -341,7 +293,7 @@ def wrapped(year: int = Query(..., ge=1900, le=2100), month: Optional[int] = Que
         "Snack": int(meal_type_counts.get("Snack", 0)),
     }
 
-    # Monthly counts (only meaningful if year view; still return 12 months)
+    # Monthly counts 
     df["month_key"] = df["date"].dt.strftime("%Y-%m")
     month_counts = df["month_key"].value_counts().to_dict()
     monthly_counts = []
@@ -382,7 +334,7 @@ def wrapped(year: int = Query(..., ge=1900, le=2100), month: Optional[int] = Que
             cost=float(expensive["cost"]),
         )
 
-    # Fun badges (simple demo logic)
+    # Fun badges 
     fun_badges: List[str] = []
     if most_expensive_meal and most_expensive_meal.cost >= 50:
         fun_badges.append("Fine Dining Moment")
