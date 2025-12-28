@@ -1,5 +1,3 @@
-# backend/app/schemas.py
-# Pydantic schemas (request/response shapes) for the API.
 
 from __future__ import annotations
 
@@ -9,36 +7,30 @@ from typing import Literal, Optional, List
 from pydantic import BaseModel, Field
 
 
-# ------------ Cuisine Suggest ------------
 
 class CuisineSuggestRequest(BaseModel):
-    # What the user typed (e.g., "chicken burrito bowl")
     food_name: str = Field(..., min_length=1)
 
 
 class CuisineSuggestResponse(BaseModel):
-    # Model's best guess (e.g., "Mexican")
+    # Model's best guess 
     cuisine: str
-    # Confidence in [0, 1] if model supports probabilities; else heuristic
+    # Confidence interval
     confidence: float = Field(..., ge=0.0, le=1.0)
 
-
-# ------------ Meals ------------
+# Meals
 
 MealType = Literal["Breakfast", "Lunch", "Dinner", "Snack"]
 Category = Literal["Home", "Restaurant", "Takeout"]
 
 
 class MealBase(BaseModel):
-    # ISO date string "YYYY-MM-DD"
     date: date
-
-    # Backend uses snake_case
     meal_type: MealType
     food_name: str = Field(..., min_length=1)
     category: Category
 
-    # Optional: frontend may send "" and we’ll fix it in main.py
+    # fix empty string
     cuisine: Optional[str] = None
 
     rating: Optional[int] = Field(None, ge=1, le=5)
@@ -61,7 +53,7 @@ class MealResponse(MealBase):
     cuisine_suggestion: Optional[CuisineSuggestion] = None
 
 
-# ------------ Wrapped ------------
+# Wrapped shit
 
 class CountItem(BaseModel):
     cuisine: Optional[str] = None
@@ -70,7 +62,7 @@ class CountItem(BaseModel):
 
 
 class MonthCount(BaseModel):
-    month: str  # "YYYY-MM"
+    month: str  
     meals: int
 
 
